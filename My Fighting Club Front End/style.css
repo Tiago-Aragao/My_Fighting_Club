@@ -1,0 +1,95 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a1a1d; /* Cor principal escura */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ARENA */
+.arena {
+  flex: 1;
+  width: 100vw;
+  background: radial-gradient(circle at center, #4e4e50, #1a1a1d); /* Cor secundária em degradê */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 4rem;
+  position: relative;
+}
+
+/* OPONENTES */
+.oponente {
+  width: 150px;
+  height: 250px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Imagens dos oponentes */
+.oponente img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Inverter imagem do segundo lutador */
+#oponente2 img {
+  transform: scaleX(-1);
+}
+
+/* RODAPÉ DE STATUS */
+.status-bar {
+  width: 100%;
+  background-color: #0f0f11;
+  color: #fff;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 2px solid #ffc107;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.status-label {
+  font-weight: bold;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.status-value {
+  font-size: 1.2rem;
+  color: #ffc107;
+}
+
+@media (max-width: 768px) {
+  .arena {
+    flex-direction: column;
+    gap: 2rem;
+    padding: 2rem;
+  }
+
+  .status-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
