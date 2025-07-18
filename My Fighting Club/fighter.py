@@ -62,7 +62,7 @@ class Fighter:
         ''' Atributo armadura será um percentual que irá reduzir diretamente 
         o dano recebido, após todos os modificadores e manobras
         Ex: Dano = 15 Armadura = 0.08 (8%) -> Dano = 13.8'''
-        self._armadura = 0  # Será calculado em porcentagem.
+        self._armadura = 0.0  # Será calculado em porcentagem.
         
         # Precisão Base:
         ''' Precisão será o atributo base para acertar o antagonista direto da 
@@ -125,40 +125,40 @@ class Fighter:
         # Modificadores de atributo principais:
         
         # Força:
-        self.modificador_percentual_forca = 1  # Aumento em Porcentagem % usado para calculos.
-        self.modificador_fixo_forca = 0  # Aumento fixo ↑.
+        self.modificador_percentual_forca = 1.0  # Aumento em Porcentagem % usado para calculos.
+        self.modificador_fixo_forca = 0  # Aumento fixo ↑ inteiro
         # Agilidade:
-        self.modificador_percentual_agilidade = 1  # Aumento em Porcentagem %
-        self.modificador_fixo_agilidade = 0  # Aumento fixo ↑.
+        self.modificador_percentual_agilidade = 1.0  # Aumento em Porcentagem %
+        self.modificador_fixo_agilidade = 0  # Aumento fixo ↑ inteiro
         # Velocidade:
-        self.modificador_percentual_velocidade = 1  # Aumento em Porcentagem %
-        self.modificador_fixo_velocidade = 0  # Aumento fixo ↑
+        self.modificador_percentual_velocidade = 1.0  # Aumento em Porcentagem %
+        self.modificador_fixo_velocidade = 0  # Aumento fixo ↑ inteiro
         # Resistência:
-        self.modificador_percentual_resistencia = 1  # Aumento em Porcentagem %
-        self.modificador_fixo_resistencia = 0  # Aumento fixo ↑
+        self.modificador_percentual_resistencia = 1.0  # Aumento em Porcentagem %
+        self.modificador_fixo_resistencia = 0  # Aumento fixo ↑ inteiro
 
         # Modificadores de atributos secundarios:
 
         # Pontos de Vida:
-        self.modificador_percentual_pontos_vida = 1  # Será em porcentagem.
+        self.modificador_percentual_pontos_vida = 1.0  # Será em porcentagem.
         self.modificador_fixo_pontos_vida = 0  # Será inteiro.
         # Iniciativa:
-        self.modificador_percentual_iniciativa = 1  # Será em porcentagem.
+        self.modificador_percentual_iniciativa = 1.0  # Será em porcentagem.
         self.modificador_fixo_iniciativa = 0  #
         # Armadura:
         ''' Na Armadura os aumentos serão diferentes, só existem aumentos fixos que impactam
         diretamente no percentual do atriburo self._armadura'''
-        self.modificador_fixo_armadura = 0
+        self.modificador_fixo_armadura = 0.0
         # Dano:
         ''' O dano pode ser aumentado atravez de forma percentual e de forma fixa. '''
-        self.modificador_percentual_dano = 1 # É em porcentagem.
-        self.modificador_fixo_dano = 0 # É um valor fixo.
+        self.modificador_percentual_dano = 1.0 # É em porcentagem.
+        self.modificador_fixo_dano = 0 # É um valor fixo inteiro.
         # Critico (Chance e Multiplicador de Dano):
         ''' No critico os aumentos fixos percentuais que impactam no dano e na chance de causar um acerto critico.
         Estes valores serão em porcentagem, mas serão somados em vez de serem multiplicados Exemplo:
         -> Atual = 5% + 0.5% modificado. '''
-        self.modificador_fixo_chance_critico = 0 
-        self.modificador_fixo_dano_critico = 0  #
+        self.modificador_fixo_chance_critico = 0.0 
+        self.modificador_fixo_dano_critico = 0.0  #
         # Precisão:
         ''' Precisão só a modificadores fixos que serão somados diretamente na base de calculo. '''
         self.modificador_fixo_precisao = 0
@@ -167,21 +167,21 @@ class Fighter:
         ''' Esses atributos são os modificadores fixos das manobras de combate, onde eles serão alterados
         para realização de calculos no propertys respectivos, baseado em seus atributos. '''
         # Bloqueio:
-        self.modificador_fixo_bloqueio = 0
+        self.modificador_fixo_bloqueio = 0.0
         # Combo:
-        self.modificador_fixo_combo = 0
+        self.modificador_fixo_combo = 0.0
         # Contra-ataque:
-        self.modificador_fixo_contra_ataque = 0
+        self.modificador_fixo_contra_ataque = 0.0
         # Deflexão:
-        self.modificador_fixo_deflexao = 0
+        self.modificador_fixo_deflexao = 0.0
         # Desarme:
-        self.modificador_fixo_desarme = 0
+        self.modificador_fixo_desarme = 0.0
         # Evasão:
-        self.modificador_fixo_evasao = 0
+        self.modificador_fixo_evasao = 0.0
         # Reversão:
-        self.modificador_fixo_reversao = 0
+        self.modificador_fixo_reversao = 0.0
         # Vingança:
-        self.modificador_fixo_vinganca = 0
+        self.modificador_fixo_vinganca = 0.0
             
         # Inicializando os pontos de vida atuais:
         self._pontos_vida_atual = self.pontos_vida_maximo
@@ -535,8 +535,22 @@ class Fighter:
      
     # Métodos de uso no combate:
     
-    def atacar(self):
-        pass
+    def atacar(self, alvo:'Fighter', combo:bool = True):
+        import random
+        # Calcula a chance de acertar:
+        chance_acerto = (self.precisao_final ** 0.8) * ((1 - alvo.chance_evasao) ** 1.2)
+        # Checagem se acertou ou não:
+        rolagem = random.random() # Gerando o sorteio.
+        # Acertou:
+        if rolagem <= chance_acerto:
+            pass
+    
+    def calcular_reducao_dano(self, dano):
+        dano_reduzido = dano * (1 - self.armadura_final)
+        return dano_reduzido
+
+    def receber_dano(self, dano):
+        self.pontos_vida_atual -= dano      
     
     def bloquear(self):
         pass
@@ -571,8 +585,6 @@ class Fighter:
     def se_vingar(self):
         pass
     
-    def receber_dano(self, dano):
-        pass
     
     def recuperar_pontos_vida(self, recuperacao):
         pass
@@ -580,8 +592,7 @@ class Fighter:
     def ativar_vantagens(self):
         pass
     
-    def calcular_reducao_dano(self, dano):
-        pass
+    
     
     def morrer(self):
         pass
