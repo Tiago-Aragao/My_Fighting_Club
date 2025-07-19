@@ -167,7 +167,7 @@ class Fighter:
         ''' Esses atributos são os modificadores fixos das manobras de combate, onde eles serão alterados
         para realização de calculos no propertys respectivos, baseado em seus atributos. '''
         # Bloqueio:
-        self.modificador_fixo_bloqueio = 0.0
+        self.modificador_fixo_bloqueio = 0.0 # 95%
         # Combo:
         self.modificador_fixo_combo = 0.0
         # Contra-ataque:
@@ -268,7 +268,7 @@ class Fighter:
             # Calcula a base ao modificadores de atributos:
             precisao_total = base + modificador_atributo
             # Retorna o valor total:
-            return max(10, precisao_total) # Limita para que a precisão minima não caia menor que 10%.
+            return min(precisao_total, 1.0) # Precisão não será maior que 1.0 (100%).
         # Caso a lista não esteja vazia:
         else:
             # Olha se existem buffs que envolvem precisão:
@@ -535,15 +535,29 @@ class Fighter:
      
     # Métodos de uso no combate:
     
-    def atacar(self, alvo:'Fighter', combo:bool = True):
-        import random
-        # Calcula a chance de acertar:
-        chance_acerto = (self.precisao_final ** 0.8) * ((1 - alvo.chance_evasao) ** 1.2)
+    def calcular_modificadores (self, base:float, taxa_str:str, modificador_str:str) -> float:
+        modificador_arma = 0
+        if self.arma_equipada and hasattr(self.arma_equipada, taxa_str):
+            modificador_arma = getattr(self.arma_equipada, taxa_str, 0)
+        for buff in self.buffs_ativos:
+            if hasattr(buff, modificador_str):
+                base += getattr(buff, modificador_str, 0)
+        for debuff in self.debuffs_ativos:
+            if hasattr(debuff, modificador_str):
+                base -= getattr(debuff, modificador_str, 0)
+        return modificador_arma + base
+    
+    def chance_acerto (self, alvo:'Fighter') -> float:
+        return (self.precisao_final ** 1.0) * ((1 - alvo.chance_evasao) ** 0.8)
+
+    def acertou_ataque(self, alvo:'Fighter', combo:bool = True):
         # Checagem se acertou ou não:
         rolagem = random.random() # Gerando o sorteio.
         # Acertou:
-        if rolagem <= chance_acerto:
-            pass
+        if rolagem <= self.chance_acerto(alvo):
+            return True
+        else:
+            return False
     
     def calcular_reducao_dano(self, dano):
         dano_reduzido = dano * (1 - self.armadura_final)
