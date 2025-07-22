@@ -112,11 +112,6 @@ class Fighter:
         o Fighter tiver recebido dano ou bloqueado, não sendo ativado caso o fighter tenha esquivado. '''
         self._taxa_reversao = 0.05  #
 
-        # Chance de Vingança ao receber ataques:
-        ''' A vingança é o atributo que determina a chance do Fighter de atacar após ter recebido dano, seja ele de qualquer
-        fonte a distancia ou corpo-a-corpo, este atributo não se ativa caso o Fighter tenha, bloqueado ou esquivado. '''
-        self._taxa_vinganca = 0.05  #
-
         '''
         Modificadores de Atributo Primario e Secundario: Os modificadores serão separados em dois modelos:
         FIXOS ->
@@ -163,7 +158,7 @@ class Fighter:
         ''' Precisão só a modificadores fixos que serão somados diretamente na base de calculo. '''
         self.modificador_fixo_precisao = 0
 
-        # Modificadores de Manobras de Combate (Evasão, Contra-Ataque, Reversão, Vingança, etc):
+        # Modificadores de Manobras de Combate (Evasão, Contra-Ataque, Reversão, etc):
         ''' Esses atributos são os modificadores fixos das manobras de combate, onde eles serão alterados
         para realização de calculos no propertys respectivos, baseado em seus atributos. '''
         # Bloqueio:
@@ -180,8 +175,6 @@ class Fighter:
         self.modificador_fixo_evasao = 0.0
         # Reversão:
         self.modificador_fixo_reversao = 0.0
-        # Vingança:
-        self.modificador_fixo_vinganca = 0.0
             
         # Inicializando os pontos de vida atuais:
         self._pontos_vida_atual = self.pontos_vida_maximo
@@ -286,7 +279,7 @@ class Fighter:
             # Calcula a base aumentada ou decrementada ao modificadores de atributos:
             precisao_total = base + modificador_atributo
             # Retorna o valor total:
-            return max(10, precisao_total) # Limita para que a precisão minima não caia menor que 10%.
+            return max(0.10, precisao_total) # Limita para que a precisão minima não caia menor que 10%.
     
     # Velocidade de Ataque Final: (Determina quantas vezes o Fighter irá agir na rodada)                        
     @property
@@ -343,197 +336,67 @@ class Fighter:
         # Soma os modificadores e retorna o valor final limitado a 80%:
         chance_critica = base + modificador_agilidade
         return min(0.8, chance_critica)
+    
+    @property
+    def multiplicador_dano_critico_final (self):
+        dano_critico = self._multiplicador_dano_critico + self.modificador_fixo_dano_critico
+        return dano_critico
 
     '''
-    Atributos de Combate:
+    Atributos de Combate (Refatorados com modificadores_bonus):
     '''
     @property
-    def chance_bloqueio (self) -> float: # Porcentagem
-        '''
-        Retorna a chance final de bloquear um ataque.
-
-        A fórmula da chance de bloqueio é composta por:
-
-        1. Um valor base fixo (5%) armazenado em `_taxa_bloqueio`.
-        2. Um bônus baseado na **Força Final**:
-        - Cada ponto de Força contribui com **+0.20%** de chance de bloqueio.
-        - Fórmula: `força_final × 0.0020`
-        3. Um modificador fixo específico: `modificador_fixo_bloqueio`.
-        4. Um possível bônus adicional se a arma equipada possuir o atributo `taxa_bloqueio`.
-
-        Exemplo:
-        - Força Final = 40 → Bônus = (40 × 0.0020) = 0.08 (8%)
-        - Arma = 0.03 (3%)
-        - Modificador fixo = 0.01 (1%)
-        - Valor base = 0.05 (5%)
-        - Resultado final: 0.17 → 17%
-        '''
-        # Calculo base do bônus de força:
+    def chance_bloqueio(self) -> float:
         bonus_forca = self.forca_final * 0.0020
-        # Base de calculo:
         base = self._taxa_bloqueio + self.modificador_fixo_bloqueio
-        modificador_arma = 0 # Inicializando a variavel.
-        # Verifica se tem arma equipada ou não:
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_bloqueio"):
-            modificador_arma = self.arma_equipada.taxa_bloqueio
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_bloqueio"):
-                base += buff.modificador_fixo_bloqueio
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_bloqueio"):
-                base -= debuff.modificador_fixo_bloqueio
-        return base + bonus_forca + modificador_arma
-    
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_bloqueio", "modificador_fixo_bloqueio")
+        return bonus_forca + modificadores_bonus
+
     @property
-    def chance_combo (self):
-        '''
-        
-        '''
-        base_atributos = (self.velocidade_final  * 0.0020) + ((self.agilidade_final / 2) * 0.0020)
+    def chance_combo(self) -> float:
+        base_atributos = (self.velocidade_final * 0.0020) + ((self.agilidade_final / 2) * 0.0020)
         base = self._taxa_combo + self.modificador_fixo_combo
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_combo"):
-            modificador_arma = self.arma_equipada.taxa_combo
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_combo"):
-                base += buff.modificador_fixo_combo
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_combo"):
-                base -= debuff.modificador_fixo_combo
-        return base + base_atributos + modificador_arma
-        
-    
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_combo", "modificador_fixo_combo")
+        return base_atributos + modificadores_bonus
+
     @property
-    def chance_contra_ataque (self):
-        '''
-        
-        '''
+    def chance_contra_ataque(self) -> float:
         base_atributos = (self.agilidade_final * 0.002) + (self.velocidade_final * 0.002)
         base = self._taxa_contra_ataque + self.modificador_fixo_contra_ataque
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_contra_ataque"):
-            modificador_arma = self.arma_equipada.taxa_contra_ataque
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_contra_ataque"):
-                base += buff.modificador_fixo_contra_ataque
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_contra_ataque"):
-                base -= debuff.modificador_fixo_contra_ataque
-        return base + base_atributos + modificador_arma
-    
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_contra_ataque", "modificador_fixo_contra_ataque")
+        return base_atributos + modificadores_bonus
+
     @property
-    def chance_deflexao (self):
-        '''
-        
-        '''
-        base_atributos = (self.agilidade_final * 0.0015) * (self.velocidade_final * 0.0010) 
+    def chance_deflexao(self) -> float:
+        base_atributos = (self.agilidade_final * 0.0015) * (self.velocidade_final * 0.0010)
         base = self._taxa_deflexao + self.modificador_fixo_deflexao
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_deflexao"):
-            modificador_arma = self.arma_equipada.taxa_deflexao
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_deflexao"):
-                base += buff.modificador_fixo_deflexao
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_deflexao"):
-                base -= debuff.modificador_fixo_deflexao
-        return base + base_atributos + modificador_arma 
-    
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_deflexao", "modificador_fixo_deflexao")
+        return base_atributos + modificadores_bonus
+
     @property
-    def chance_desarme (self):
-        '''
-        
-        '''
+    def chance_desarme(self) -> float:
         bonus_forca = (self.forca_final * 0.001) + ((self.forca_final ** 0.7) * 0.002)
         bonus_agilidade = (self.agilidade_final * 0.0005) + ((self.agilidade_final ** 0.7) * 0.001)
-        base_atributos = bonus_agilidade + bonus_forca
         base = self._taxa_desarme + self.modificador_fixo_desarme
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_desarme"):
-            modificador_arma = self.arma_equipada.taxa_desarme
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_desarme"):
-                base += buff.modificador_fixo_desarme
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_desarme"):
-                base -= debuff.modificador_fixo_desarme
-        return base + base_atributos + modificador_arma  
-        
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_desarme", "modificador_fixo_desarme")
+        return bonus_forca + bonus_agilidade + modificadores_bonus
+
     @property
-    def chance_evasao (self):
-        '''
-        
-        '''
+    def chance_evasao(self) -> float:
         bonus_agilidade = ((self.agilidade_final ** 0.85) * 0.01) * 0.5
         bonus_velocidade = ((self.velocidade_final ** 0.6) * 0.02) / 2
-        base_atributos = bonus_agilidade + bonus_velocidade
         base = self._taxa_evasao + self.modificador_fixo_evasao
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_evasao"):
-            modificador_arma = self.arma_equipada.taxa_evasao
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_evasao"):
-                base += buff.modificador_fixo_evasao
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, "modificador_fixo_evasao"):
-                base -= debuff.modificador_fixo_evasao
-        return base + base_atributos + modificador_arma
-    
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_evasao", "modificador_fixo_evasao")
+        return bonus_agilidade + bonus_velocidade + modificadores_bonus
+
     @property
-    def chance_reversao (self):
-        '''
-        
-        '''
+    def chance_reversao(self) -> float:
         bonus_forca = (self.forca_final * 0.0035) + ((self.forca_final ** 0.025) * 0.015)
         bonus_velocidade = (self.velocidade_final * 0.0035) + ((self.velocidade_final ** 0.01) * 0.01)
-        base_atributos = bonus_forca + bonus_velocidade
         base = self._taxa_reversao + self.modificador_fixo_reversao
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_reversao"):
-            modificador_arma = self.arma_equipada.taxa_reversao
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_reversao"):
-                base += buff.modificador_fixo_reversao
-        for debuff in self.buffs_ativos:
-            if hasattr(debuff, "modificador_fixo_reversao"):
-                base -= debuff.modificador_fixo_reversao
-        return base + base_atributos + modificador_arma
-                
-    @property
-    def chance_vinganca (self):
-        '''
-        
-        '''
-        bonus_forca = (self.forca_final * 0.005) + ((self.forca_final ** 0.025) * 0.015)
-        base = self._taxa_vinganca + self.modificador_fixo_vinganca
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, "taxa_vinganca"):
-            modificador_arma = self.arma_equipada.taxa_vinganca
-        for buff in self.buffs_ativos:
-            if hasattr(buff, "modificador_fixo_vinganca"):
-                base += buff.modificador_fixo_vinganca
-        for debuff in self.buffs_ativos:
-            if hasattr(debuff, "modificador_fixo_vinganca"):
-                base -= debuff.modificador_fixo_vinganca
-        return base + bonus_forca + modificador_arma
+        modificadores_bonus = self.calcular_modificadores(base, "taxa_reversao", "modificador_fixo_reversao")
+        return bonus_forca + bonus_velocidade + modificadores_bonus
     
-    '''
-    Propriedades de Combate:
-    '''      
-    @property
-    def dano(self):
-        # Dano base:
-        if self.arma_equipada is None:
-            return (self._dano_base + self.forca_final + self.modificador_fixo_dano) * self.modificador_percentual_dano
-        # Dano armado:
-        else:
-            return (self.arma_equipada.dano + self.forca_final + self.modificador_fixo_dano) * self.modificador_percentual_dano
-    
-    @property
-    def estar_vivo(self):
-        return self.pontos_vida_atual > 0
-     
-    # Métodos de uso no combate:
     
     def calcular_modificadores (self, base:float, taxa_str:str, modificador_str:str) -> float:
         modificador_arma = 0
@@ -546,36 +409,72 @@ class Fighter:
             if hasattr(debuff, modificador_str):
                 base -= getattr(debuff, modificador_str, 0)
         return modificador_arma + base
+      
+    @property
+    def dano(self):
+        # Dano base:
+        if self.arma_equipada is None:
+            return (self._dano_base + self.forca_final + self.modificador_fixo_dano) * self.modificador_percentual_dano
+        # Dano armado:
+        else:
+            return (self.arma_equipada.dano + self.forca_final + self.modificador_fixo_dano) * self.modificador_percentual_dano
     
+    @property
+    def esta_vivo(self) -> bool:
+        '''
+        Retorna `True` se o personagem ainda tiver pontos de vida acima de zero.
+        Caso contrário, retorna `False`, indicando que está morto ou inconsciente.
+        '''
+        return self.pontos_vida_atual > 0
+     
+    # Métodos de uso no combate:
+    
+
     def chance_acerto (self, alvo:'Fighter') -> float:
         return (self.precisao_final ** 1.0) * ((1 - alvo.chance_evasao) ** 0.8)
 
-    def acertou_ataque(self, alvo:'Fighter', combo:bool = True):
+    def ataque(self, alvo:'Fighter', combo:True):
         # Checagem se acertou ou não:
         rolagem = random.random() # Gerando o sorteio.
         # Acertou:
         if rolagem <= self.chance_acerto(alvo):
             return True
+        # Errou (Caso o alvo esquive do ataque):
         else:
             return False
-    
-    def calcular_reducao_dano(self, dano):
-        dano_reduzido = dano * (1 - self.armadura_final)
-        return dano_reduzido
-
-    def receber_dano(self, dano):
-        self.pontos_vida_atual -= dano      
-    
+        
+    def calcular_combo (self) -> int:
+        '''
+        Retorna a quantidade de ataques que será o combo:
+        Testa as chances de quantos ataques de combo serão executados.
+        
+        **Parâmetros:**
+        - `Não recebe parâmetros.`
+        
+        **Retorno:**
+        - Retorna quantos ataques de combo serão executados `(int)`.
+        '''
+        # Inicializa a variavel combo:
+        combo = 0
+        # Sorteio de combo:
+        while random.random() <= self.chance_combo:
+            combo+=1 # Sempre que é sorteado o combo é executado.
+        # Retorno do método:
+        return combo
+        
+    def ataque_combo (self, alvo:'Fighter', quantidade_ataques:int):
+        pass
+        
+    def receber_ataque (self, dano:float, acertou:bool):
+        pass
+        
     def bloquear(self):
         pass
     
-    def esquivar(self):
+    def esquivar(self, dano):
         pass
     
     def sacar_arma(self):
-        pass
-    
-    def perder_arma(self):
         pass
     
     def trocar_arma(self):
@@ -596,32 +495,106 @@ class Fighter:
     def reverter(self):
         pass
     
-    def se_vingar(self):
-        pass
-    
-    
-    def recuperar_pontos_vida(self, recuperacao):
-        pass
-    
     def ativar_vantagens(self):
         pass
-    
-    
-    
-    def morrer(self):
-        pass
-       
+        
     def ganhar_exp(self):
         pass
     
     def subir_nivel(self):
         pass
-    
-    def calcular_pontos_vida_maximo(self):
-        pass
-    
+        
     def escolher_alvo_combate(self):
         pass
     
-    def aplicar_critico(self):
-        pass
+    
+    '''
+    MÉTODOS PRONTOS:
+    '''
+    
+    # Metodo de redução de dano: TODO: PRONTO!
+    def calcular_reducao_dano(self, dano:float) -> float:
+        '''
+        Calcula a redução de dano com base na armadura final do personagem.
+
+        Parâmetros:
+        - dano (float): Valor bruto de dano que seria recebido antes da mitigação.
+
+        Retorna:
+        - float: Valor efetivo do dano após aplicação da redução pela armadura.
+
+        A fórmula utilizada é:
+        dano_reduzido = dano * (1 - armadura_final)
+
+        Onde `armadura_final` representa a porcentagem de mitigação de dano.
+        Exemplo:
+        - Se armadura_final = 0.10 (10%) e o dano recebido é 100,
+        então o dano efetivo será 100 * (1 - 0.10) = 90.
+        '''
+        # Formula para reduzir o dano:
+        dano_reduzido = dano * (1 - self.armadura_final)
+        # Retorno do metodo:
+        return dano_reduzido
+
+    # Método receber_dano: TODO: PRONTO!
+    def receber_dano(self, dano:float) -> None:
+        '''
+        Este método não retorna nada, apenas altera o valor dos pontos de vida atual do Fighter
+        baseado no dano recebido.
+        
+        Parâmetros:
+        - Dano (float)
+        
+        Retorna:
+        - None
+        '''
+        self.pontos_vida_atual -= dano 
+    
+    # Método Dano Critico: TODO: PRONTO!
+    def dano_critico(self, dano: float) -> float:
+        '''
+        Calcula o valor final do dano crítico com base no dano original e
+        no multiplicador de dano crítico do personagem.
+
+        Parâmetros:
+        - dano (float): Valor base de dano antes do crítico.
+
+        Retorna:
+        - float: Dano total após aplicação do multiplicador de crítico.
+
+        Exemplo:
+        - Dano = 50
+        - Multiplicador_dano_critico_final = 2.0
+        - Resultado = 100
+        '''
+        dano_total = dano * self.multiplicador_dano_critico_final
+        return dano_total
+    
+    # Recuperar pontos de vida: TODO: PRONTO!
+    def recuperar_pontos_vida(self, recuperacao:float) -> None:
+        '''
+        Altera os pontos de vida do personagem com base no valor fornecido.
+
+        Parâmetros:
+        - valor (float): Valor a ser somado aos pontos de vida.
+        Pode ser positivo (cura) ou negativo (dano).
+
+        Observações:
+        - A integridade dos pontos de vida (mínimo 0, máximo permitido) é garantida pelo setter.
+        - Usar valor negativo permite simular efeitos como cura revertida ou drenagem de vida.
+        '''
+        self.pontos_vida_atual += recuperacao
+    
+    # Desequipar arma equipada: TODO: PRONTO!
+    def perder_arma(self) -> None:
+        '''
+        Este método não retorna nada, apenas altera o valor de self.arma_equipada para None assim
+        "desarmando" o Fighter alvo. É acionado ao Desarme retornar True. 
+        
+        Parâmetros:
+        - None
+        
+        Retorna:
+        - None
+        '''
+        self.arma_equipada = None
