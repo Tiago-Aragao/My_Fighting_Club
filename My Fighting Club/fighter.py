@@ -429,39 +429,39 @@ class Fighter:
      
     # Métodos de uso no combate:
     
-
     def chance_acerto (self, alvo:'Fighter') -> float:
+        '''
+        Recebe como paramentro do ataque e retorna a chance que o Fighter tem
+        de acertar o mesmo.
+        
+        **Fórmula:**
+        - (precisão_atacante ** 1) * ((1 - chance_evasão_alvo) ** 0.8) 
+        
+        **Parâmetros:**
+        - Alvo: Objeto do Fighter alvo.
+        
+        **Retorno:**
+        - chance de acerto em float.
+        '''
+        # Na realidade a esquiva é checada aqui:
         return (self.precisao_final ** 1.0) * ((1 - alvo.chance_evasao) ** 0.8)
 
-    def ataque(self, alvo:'Fighter', combo:True):
+    def ataque_basico(self, alvo:'Fighter', combo:True):
         # Checagem se acertou ou não:
         rolagem = random.random() # Gerando o sorteio.
+        
+        # Checando se terá combo, se sim, quantos combos terão:
+        if combo: # Se combo for true.
+            quant_combo = self.calcular_combo()
         # Acertou:
         if rolagem <= self.chance_acerto(alvo):
             return True
         # Errou (Caso o alvo esquive do ataque):
         else:
             return False
-        
-    def calcular_combo (self) -> int:
-        '''
-        Retorna a quantidade de ataques que será o combo:
-        Testa as chances de quantos ataques de combo serão executados.
-        
-        **Parâmetros:**
-        - `Não recebe parâmetros.`
-        
-        **Retorno:**
-        - Retorna quantos ataques de combo serão executados `(int)`.
-        '''
-        # Inicializa a variavel combo:
-        combo = 0
-        # Sorteio de combo:
-        while random.random() <= self.chance_combo:
-            combo+=1 # Sempre que é sorteado o combo é executado.
-        # Retorno do método:
-        return combo
-        
+          
+    
+            
     def ataque_combo (self, alvo:'Fighter', quantidade_ataques:int):
         pass
         
@@ -469,9 +469,6 @@ class Fighter:
         pass
         
     def bloquear(self):
-        pass
-    
-    def esquivar(self, dano):
         pass
     
     def sacar_arma(self):
@@ -598,3 +595,23 @@ class Fighter:
         - None
         '''
         self.arma_equipada = None
+    
+    # Calcular Combo TODO: PRONTO!
+    def calcular_combo (self) -> int:
+        '''
+        Retorna a quantidade de ataques que será o combo:
+        Testa as chances de quantos ataques de combo serão executados.
+        
+        **Parâmetros:**
+        - `Não recebe parâmetros.`
+        
+        **Retorno:**
+        - Retorna quantos ataques de combo serão executados `(int)`.
+        '''
+        # Inicializa a variavel combo:
+        combo = 0
+        # Sorteio de combo:
+        while random.random() <= self.chance_combo:
+            combo+=1 # Sempre que é sorteado o combo é executado.
+        # Retorno do método:
+        return combo
