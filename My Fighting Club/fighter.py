@@ -345,8 +345,57 @@ class Fighter:
     '''
     Atributos de Combate (Refatorados com modificadores_bonus):
     '''
+    
+    # Método para calcular os modificadores das propertys de Chance das Manobras de Combate:
+    def calcular_modificadores(self, base: float, taxa_str: str, modificador_str: str) -> float:
+        '''
+        Método auxiliar responsável por calcular o valor total de uma taxa, considerando:
+
+        1. **Valor base inicial informado** (normalmente taxa base + modificador fixo).
+        2. **Modificadores da arma equipada**, caso ela possua o atributo especificado.
+        3. **Buffs ativos**, somando modificadores positivos ao valor base.
+        4. **Debuffs ativos**, subtraindo modificadores negativos do valor base.
+
+        **Parâmetros:**
+        - `base (float)`: Valor inicial da taxa (ex.: taxa base + modificador fixo).
+        - `taxa_str (str)`: Nome do atributo da arma que representa a taxa (ex.: "taxa_bloqueio").
+        - `modificador_str (str)`: Nome do atributo usado para buffs/debuffs (ex.: "modificador_fixo_bloqueio").
+
+        **Retorno:**
+        - `float`: Valor final da taxa após aplicar modificadores da arma, buffs e debuffs.
+        '''
+        # Inicializa o modificador vindo da arma equipada como zero
+        modificador_arma = 0
+        # Verifica se existe uma arma equipada e se ela possui o atributo especificado por taxa_str
+        if self.arma_equipada and hasattr(self.arma_equipada, taxa_str):
+            # Obtém o valor do modificador da arma para a taxa específica, padrão 0 se não existir
+            modificador_arma = getattr(self.arma_equipada, taxa_str, 0)
+        # Itera sobre todos os buffs ativos no personagem
+        for buff in self.buffs_ativos:
+            # Se o buff possui o modificador especificado por modificador_str
+            if hasattr(buff, modificador_str):
+                # Adiciona o valor do modificador do buff ao valor base
+                base += getattr(buff, modificador_str, 0)
+        # Itera sobre todos os debuffs ativos no personagem
+        for debuff in self.debuffs_ativos:
+            # Se o debuff possui o modificador especificado por modificador_str
+            if hasattr(debuff, modificador_str):
+                # Subtrai o valor do modificador do debuff do valor base
+                base -= getattr(debuff, modificador_str, 0)
+        # Retorna a soma do modificador da arma com o valor base ajustado pelos buffs e debuffs
+        return modificador_arma + base
+    
     @property
     def chance_bloqueio(self) -> float:
+        '''
+        Propriedade que retorna a chance final de bloqueio após acrecentar todos os modificadores:
+        
+        **Fórmula:**
+        - Influência de Força == A cada 1 ponto aumenta 0,20% na chance real de bloqueio.
+        
+        **Retorno:**
+        - Chance Combo == Influência de Força + Soma de Todos os modificadores.
+        '''
         bonus_forca = self.forca_final * 0.0020
         base = self._taxa_bloqueio + self.modificador_fixo_bloqueio
         modificadores_bonus = self.calcular_modificadores(base, "taxa_bloqueio", "modificador_fixo_bloqueio")
@@ -354,6 +403,24 @@ class Fighter:
 
     @property
     def chance_combo(self) -> float:
+        '''
+        Propriedade que retorna a chance final de realizar um combo (ataques consecutivos),
+        considerando os atributos e modificadores totais.
+
+        **Fórmula:**
+        
+        `Influência de Agilidade:`
+        - Velocidade: +0,20% por ponto.
+        
+        `Influência de Velocidade:`
+        - Agilidade: +0,20% a cada 2 pontos.
+        
+        `Influência dos Atributos:`
+        - ***Somados entre si para crescimento uniforme.***
+
+        **Retorno:**
+        - Chance Combo = Influência dos Atributos + Soma de Todos os Modificadores (buffs, debuffs, arma).
+        '''
         base_atributos = (self.velocidade_final * 0.0020) + ((self.agilidade_final / 2) * 0.0020)
         base = self._taxa_combo + self.modificador_fixo_combo
         modificadores_bonus = self.calcular_modificadores(base, "taxa_combo", "modificador_fixo_combo")
@@ -361,13 +428,47 @@ class Fighter:
 
     @property
     def chance_contra_ataque(self) -> float:
-        base_atributos = (self.agilidade_final * 0.002) + (self.velocidade_final * 0.002)
+        '''
+        Propriedade que retorna a chance final de contra-atacar após um bloqueio bem-sucedido ou defesa válida.
+
+        **Fórmula:**
+        
+        `Influência de Agilidade:`
+        - Agilidade: +0,20% por ponto.
+        
+        `Influência de Velocidade:`
+        - Velocidade: +0,20% por ponto.
+        
+        `Influência dos Atributos:`
+        - ***Somados entre si para crescimento uniforme.***
+
+        **Retorno:**
+        - Chance de Contra-Ataque = Influência dos Atributos + Soma de Todos os Modificadores (buffs, debuffs, arma).
+        '''
+        base_atributos = (self.agilidade_final * 0.0020) + (self.velocidade_final * 0.0020)
         base = self._taxa_contra_ataque + self.modificador_fixo_contra_ataque
         modificadores_bonus = self.calcular_modificadores(base, "taxa_contra_ataque", "modificador_fixo_contra_ataque")
         return base_atributos + modificadores_bonus
 
     @property
     def chance_deflexao(self) -> float:
+        '''
+        Propriedade que retorna a chance final de defletir um ataque, redirecionando-o ou anulando parte do dano.
+
+        **Fórmula:**
+        
+        `Influência de Agilidade:`
+        - Agilidade * 0,15%
+        
+        `Influência de Velocidade:`
+        - Velocidade * 0,10%
+        
+        `Influência dos Atributos:`
+        - ***Multiplicados entre si para representar coordenação fina.***
+
+        **Retorno:**
+        - Chance de Deflexão = Influência dos Atributos + Soma de Todos os Modificadores (buffs, debuffs, arma).
+        '''
         base_atributos = (self.agilidade_final * 0.0015) * (self.velocidade_final * 0.0010)
         base = self._taxa_deflexao + self.modificador_fixo_deflexao
         modificadores_bonus = self.calcular_modificadores(base, "taxa_deflexao", "modificador_fixo_deflexao")
@@ -375,6 +476,20 @@ class Fighter:
 
     @property
     def chance_desarme(self) -> float:
+        '''
+        Propriedade que retorna a chance final de desarmar o oponente com base em força e agilidade.
+
+        **Fórmula:**
+        
+        `Influência de Força:`
+        - +0,10% por ponto + (Força ^ 0.7) * 0,20%
+        
+        `Influência de Agilidade:`
+        - +0,05% por ponto + (Agilidade ^ 0.7) * 0,10%
+
+        **Retorno:**
+        - Chance de Desarme = Influência de Força + Influência de Agilidade + Soma de Todos os Modificadores.
+        '''
         bonus_forca = (self.forca_final * 0.001) + ((self.forca_final ** 0.7) * 0.002)
         bonus_agilidade = (self.agilidade_final * 0.0005) + ((self.agilidade_final ** 0.7) * 0.001)
         base = self._taxa_desarme + self.modificador_fixo_desarme
@@ -383,6 +498,20 @@ class Fighter:
 
     @property
     def chance_evasao(self) -> float:
+        '''
+        Propriedade que retorna a chance final de esquiva (evasão total do ataque).
+
+        **Fórmula:**
+        
+        `Influência de Agilidade:`
+        - (Agilidade ^ 0.85) * 0.5%
+        
+        `Influência de Velocidade:`
+        - (Velocidade ^ 0.6) * 1.0%
+
+        **Retorno:**
+        - Chance de Evasão = Influência de Agilidade + Influência de Velocidade + Modificadores.
+        '''
         bonus_agilidade = ((self.agilidade_final ** 0.85) * 0.01) * 0.5
         bonus_velocidade = ((self.velocidade_final ** 0.6) * 0.02) / 2
         base = self._taxa_evasao + self.modificador_fixo_evasao
@@ -391,27 +520,48 @@ class Fighter:
 
     @property
     def chance_reversao(self) -> float:
+        '''
+        Propriedade que retorna a chance final de reverter a situação em um confronto direto (virar um ataque contra o inimigo).
+
+        **Fórmula:**
+        
+        `Influência de Força:`
+        - +0,35% por ponto + (Força ^ 0.025) * 1,5%
+        
+        `Influência de Velocidade:`
+        - +0,35% por ponto + (Velocidade ^ 0.01) * 1,0%
+
+        **Retorno:**
+        - Chance de Reversão = Influência de Força + Influência de Velocidade + Modificadores.
+        '''
         bonus_forca = (self.forca_final * 0.0035) + ((self.forca_final ** 0.025) * 0.015)
         bonus_velocidade = (self.velocidade_final * 0.0035) + ((self.velocidade_final ** 0.01) * 0.01)
         base = self._taxa_reversao + self.modificador_fixo_reversao
         modificadores_bonus = self.calcular_modificadores(base, "taxa_reversao", "modificador_fixo_reversao")
         return bonus_forca + bonus_velocidade + modificadores_bonus
-    
-    
-    def calcular_modificadores (self, base:float, taxa_str:str, modificador_str:str) -> float:
-        modificador_arma = 0
-        if self.arma_equipada and hasattr(self.arma_equipada, taxa_str):
-            modificador_arma = getattr(self.arma_equipada, taxa_str, 0)
-        for buff in self.buffs_ativos:
-            if hasattr(buff, modificador_str):
-                base += getattr(buff, modificador_str, 0)
-        for debuff in self.debuffs_ativos:
-            if hasattr(debuff, modificador_str):
-                base -= getattr(debuff, modificador_str, 0)
-        return modificador_arma + base
-      
+
     @property
-    def dano(self):
+    def dano_final(self):
+        '''
+        Propriedade que retorna o valor final de dano causado pelo personagem, levando em conta 
+        se ele está ou não utilizando uma arma equipada, além de modificadores fixos e percentuais.
+
+        **Cálculo:**
+        - **Sem arma equipada:**
+            - Dano = (Dano Base + Força Final + Modificador Fixo de Dano) × Modificador Percentual de Dano
+        - **Com arma equipada:**
+            - Dano = (Dano da Arma + Força Final + Modificador Fixo de Dano) × Modificador Percentual de Dano
+
+        **Fontes de modificação:**
+        - `self._dano_base`: valor base de dano desarmado.
+        - `self.arma_equipada.dano`: valor de dano fixo da arma equipada.
+        - `self.forca_final`: valor final de força do personagem (com buffs, equipamentos etc.).
+        - `self.modificador_fixo_dano`: bônus fixo adicional ao dano (ex.: talentos, buffs).
+        - `self.modificador_percentual_dano`: multiplicador percentual aplicado após todos os valores somados.
+
+        **Retorno:**
+        - `float`: valor total de dano, pronto para ser aplicado em testes de ataque.
+        '''
         # Dano base:
         if self.arma_equipada is None:
             return (self._dano_base + self.forca_final + self.modificador_fixo_dano) * self.modificador_percentual_dano
@@ -446,27 +596,43 @@ class Fighter:
         # Na realidade a esquiva é checada aqui:
         return (self.precisao_final ** 1.0) * ((1 - alvo.chance_evasao) ** 0.8)
 
-    def ataque_basico(self, alvo:'Fighter', combo:True):
-        # Checagem se acertou ou não:
-        rolagem = random.random() # Gerando o sorteio.
+    def ataque_basico(self, alvo:'Fighter') -> dict:
         
-        # Checando se terá combo, se sim, quantos combos terão:
-        if combo: # Se combo for true.
-            quant_combo = self.calcular_combo()
-        # Acertou:
-        if rolagem <= self.chance_acerto(alvo):
-            return True
-        # Errou (Caso o alvo esquive do ataque):
+        # Dano que será aplicado caso o ataque acertar:
+        dano = self.dano_final
+        # Verifica se o ataque foi critico:
+        if random.random() <= self.chance_critica_final:
+            critico = True
+            dano_critico = self.calcular_dano_critico(dano)
         else:
-            return False
-          
+            critico = False
+        # Verifica se o ataque acertou:
+        if random.random() <= self.chance_acerto(alvo):
+            acertou = True
+        else: # Errou (Caso o alvo esquive do ataque):
+            acertou = False
+        
+        return {
+            'dano': dano if critico else dano_critico,
+            'acertou': acertou
+        }
     
-            
+    def receber_ataque (self, resultados:dict) -> None:
+        '''
+        
+        '''
+        if resultados['acertou']:
+            pass
+        else:
+            print(f"{self.nome} esquivou do ataque!")
+           
     def ataque_combo (self, alvo:'Fighter', quantidade_ataques:int):
         pass
         
-    def receber_ataque (self, dano:float, acertou:bool):
-        pass
+    
+    
+    def calcular_dano_critico (self, dano:float) -> float:
+        return dano * self.multiplicador_dano_critico_final
         
     def bloquear(self):
         pass
